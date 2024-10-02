@@ -27,6 +27,7 @@ if (location.protocol !== "https:" && !location.host.startsWith("127.0.0.1")) {
     Display.TreeScheme.initialize();
 
     // Export functions to window for interop.
+    (window as any).getCurrentScheme = App.getCurrentScheme;
     (window as any).getCurrentSchemeJson = App.getCurrentSchemeJson;
     (window as any).getCurrentTreeJson = App.getCurrentTreeJson;
     (window as any).getCurrentPackJson = App.getCurrentPackJson;
