@@ -8,6 +8,55 @@ import * as Utils from "../utils";
 import { Vector } from "../utils";
 import * as Svg from "./svg";
 
+// Let Typescript know that getCurrentScheme is exposed on the Window object.
+declare global {
+    interface Window {
+        getCurrentScheme: () => TreeScheme.IScheme
+    }
+}
+
+let copyConfig: {key: string, kind: string, nodeData: any} | null = null;
+
+function copy (node: Tree.INode, field: Tree.Field | null) {
+    const fieldKey = field?.name ?? "";
+    const nodeData: {[key: string]: any} = Tree.Serializer.createObject(node);
+    if (fieldKey && !nodeData[fieldKey]) {
+        alert(`Could not copy from field "${fieldKey}"`);
+        return;
+    }
+    copyConfig = {"key": field?.name ?? "", "kind": field?.kind ?? "node", "nodeData": nodeData};
+}
+
+function paste (field: Tree.Field, changed: fieldChangedCallback<Tree.Field>) {
+    const scheme = window?.getCurrentScheme();
+    if (!(copyConfig && scheme)) {
+        return;
+    }
+    if (field.kind.indexOf(copyConfig.kind) === -1) {
+        alert(`Cannot copy from "${copyConfig.kind}" source to "${field.kind}" destination.`);
+        return;
+    }
+    const result = Tree.Parser.parseObject(copyConfig.nodeData);
+    if (result.kind === "error") {
+        alert(`Failed to parse tree. Error: ${result.errorMessage}`);
+        return;
+    }
+    const existingValue = field.value;
+    /*
+     * The Tree.Serializer.createObject function excludes fields with empty array values,
+     * and Tree.Parser.parseObject does not initialise with defaults for missing fields.
+     * To avoid causing odd behaviours, we'll call duplicateWithMissingFields to ensure
+     * that all nodes we paste conform to the current scheme.
+     *
+     * TODO: Investigate whether this can be more efficiently handled.
+    */
+    const copiedNode = TreeScheme.Instantiator.duplicateWithMissingFields(scheme, result.value);
+    const newValue = copyConfig.key ? copiedNode.getField(copyConfig.key)?.value : copiedNode;
+    const resolvedValue = Array.isArray(existingValue) ? existingValue.concat(newValue as Tree.FieldElementType<Tree.Field>) : newValue;
+    changed(Tree.Modifications.fieldWithValue(field, resolvedValue as unknown as Tree.FieldValueType<Tree.Field>));
+    copyConfig = null;
+}
+
 /** Callback for when a tree is changed, returns a new immutable tree. */
 export type treeChangedCallback = (newTree: Tree.INode) => void;
 
@@ -65,6 +114,7 @@ const nodeContentPadding = 8;
 const fieldNameWidth = 210;
 const infoButtonSize = 20;
 const nameButtonSize = 20;
+const copyButtonSize = 20;
 const nodeConnectionCurviness = .7;
 
 type nodeChangedCallback = (newNode: Tree.INode) => void;
@@ -104,10 +154,17 @@ function createNode(
 
     const headerYOffset = yOffset;
 
+    const copyButtonPosition: Vector.IVector2 = {
+        x: size.x - Utils.half(nodeContentPadding) - nameButtonSize - Utils.half(copyButtonSize),
+        y: halfNodeHeaderHeight + headerYOffset,
+    };
+
+    nodeElement.addGraphics("copypaste-button", "copy", copyButtonPosition, () => copy(node, null));
+
     // Add type dropdown.
     nodeElement.addDropdown("node-type", typeOptionsIndex, typeOptions,
         { x: infoButtonSize + Utils.half(nodeContentPadding), y: Utils.half(nodeContentPadding) + headerYOffset },
-        { x: size.x - nodeContentPadding - infoButtonSize - nameButtonSize, y: nodeHeaderHeight - nodeContentPadding },
+        { x: size.x - nodeContentPadding - infoButtonSize - nameButtonSize - copyButtonSize, y: nodeHeaderHeight - nodeContentPadding },
         newIndex => {
             const newNodeType = typeOptions[newIndex];
             const newNode = TreeScheme.Instantiator.changeNodeType(typeLookup.scheme, node, newNodeType);
@@ -203,6 +260,13 @@ function createField(
             xOffset += fieldNameWidth;
         }
 
+        if (field.kind === "node") {
+            const pos: Vector.Position = { x: xOffset, y: baseYOffset + Utils.half(nodeContentPadding) };
+            const size: Vector.Size = { x: fieldSize.x - pos.x - Utils.half(nodeContentPadding), y: nodeFieldHeight - nodeContentPadding };
+            const buttonPos = { x: pos.x + size.x - 30, y: pos.y + Utils.half(size.y) }
+            parent.addGraphics("copypaste-button", "paste", buttonPos, () => paste(field, changed));
+        }
+
         createElementValue(field.value, xOffset, 0, newElement => {
             changed(Tree.Modifications.fieldWithValue(field, newElement as Tree.FieldValueType<T>));
         });
@@ -226,7 +290,7 @@ function createField(
         }
 
         // Add element button.
-        parent.addGraphics("fieldvalue-button", "arrayAdd", { x: xOffset, y: baseYOffset + Utils.half(nodeFieldHeight) }, () => {
+        parent.addGraphics("fieldvalue-button", "arrayAdd", { x: xOffset - 30, y: baseYOffset + Utils.half(nodeFieldHeight) }, () => {
             if (fieldDefinition === undefined) {
                 throw new Error("Unable to create a new element without a FieldDefinition");
             }
@@ -234,6 +298,12 @@ function createField(
             const newArray = array.concat(newElement as Tree.FieldElementType<T>);
             changed(Tree.Modifications.fieldWithValue(field, newArray as unknown as Tree.FieldValueType<T>));
         });
+
+        let copyButtonPosition = { x: xOffset - 15, y: baseYOffset + Utils.half(nodeFieldHeight) };
+        let pasteButtonPosition = { x: xOffset, y: baseYOffset + Utils.half(nodeFieldHeight) }
+
+        parent.addGraphics("copypaste-button", "copy", copyButtonPosition, () => copy(node, field));
+        parent.addGraphics("copypaste-button", "paste", pasteButtonPosition, () => paste(field, changed));
 
         for (let i = 0; i < field.value.length; i++) {
             const element = array[i];
