@@ -18,6 +18,10 @@ declare global {
 let copyConfig: {key: string, kind: string, nodeData: any} | null = null;
 
 function copy (node: Tree.INode, field: Tree.Field | null) {
+    if (node.type === Tree.noneNodeType) {
+        alert("Cannot copy empty node");
+        return;
+    }
     const fieldKey = field?.name ?? "";
     const nodeData: {[key: string]: any} = Tree.Serializer.createObject(node);
     if (fieldKey && !nodeData[fieldKey]) {
