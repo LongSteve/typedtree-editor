@@ -33,7 +33,7 @@ fi
 info "Minify JavaScript bundle"
 ./node_modules/.bin/uglifyjs \
     --output "$BUILD_DIR/bundle.js" --compress --mangle \
-    reserved=["getCurrentSchemeJson","getCurrentTreeJson"] \
+    reserved=["getCurrentScheme","getCurrentSchemeJson","getCurrentTreeJson"] \
     -- "$BUILD_DIR/bundle.js"
 
 info "Finished build"

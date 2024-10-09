@@ -185,6 +185,10 @@ export async function run(searchParams: URLSearchParams): Promise<void> {
     console.log("Stopped running");
 }
 
+export function getCurrentScheme(): TreeScheme.IScheme | undefined {
+    return currentScheme;
+}
+
 /** Return a json export of the currently loaded scheme. */
 export function getCurrentSchemeJson(): string | undefined {
     return currentScheme === undefined ? undefined : TreeScheme.Serializer.composeJson(currentScheme);

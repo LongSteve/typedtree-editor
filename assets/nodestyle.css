@@ -164,12 +164,12 @@
     fill: none;
 }
 
-#svg-display .fieldvalue-button:hover {
+#svg-display .fieldvalue-button:hover, #svg-display .copypaste-button:hover {
     fill: #FFF;
     cursor: pointer;
 }
 
-#svg-display .fieldvalue-button {
+#svg-display .fieldvalue-button, #svg-display .copypaste-button {
     fill: #999;
 }
 
