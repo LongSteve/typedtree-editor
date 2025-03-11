@@ -491,6 +491,7 @@ function updateTree(name: string): void {
     }
 
     Utils.Dom.setText("tree-title", name);
+    document.title = name;
     currentTreeName = name;
     Display.Tree.setTree(currentScheme, treeHistory.current, newTree => {
         sequencer.enqueue(async () => {
