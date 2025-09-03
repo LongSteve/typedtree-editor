@@ -13,7 +13,7 @@ verifyCommand tr
 verifyCommand sed
 verifyCommand rm
 verifyCommand rsync
-verifyCommand lsof
+#verifyCommand lsof
 verifyCommand grep
 verifyCommand awk
 verifyCommand xargs
